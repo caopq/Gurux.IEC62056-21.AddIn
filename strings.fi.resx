@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root>
+	<xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+		<xsd:element name="root" msdata:IsDataSet="true">
+			<xsd:complexType>
+				<xsd:choice maxOccurs="unbounded">
+					<xsd:element name="data">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+								<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" />
+							<xsd:attribute name="type" type="xsd:string" />
+							<xsd:attribute name="mimetype" type="xsd:string" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="resheader">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" use="required" />
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:complexType>
+		</xsd:element>
+	</xsd:schema>
+	<resheader name="ResMimeType">
+		<value>text/microsoft-resx</value>
+	</resheader>
+	<resheader name="Version">
+		<value>1.0.0.0</value>
+	</resheader>
+	<resheader name="Reader">
+		<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<resheader name="Writer">
+		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<data name="NoneTxt">
+		<value>Tyhjä</value>
+	</data>
+	<data name="Int16Txt">
+		<value>Int16</value>
+	</data>
+	<data name="Int32Txt">
+		<value>Int32</value>
+	</data>
+	<data name="FloatTxt">
+		<value>Float</value>
+	</data>
+	<data name="DoubleTxt">
+		<value>Double</value>
+	</data>
+	<data name="DateTimeTxt">
+		<value>DateTime</value>
+	</data>
+	<data name="StringTxt">
+		<value>String</value>
+	</data>
+	<data name="BooleanTxt">
+		<value>Boolean</value>
+	</data>
+	<data name="ByteTxt">
+		<value>Byte</value>
+	</data>
+	<data name="UInt16Txt">
+		<value>UInt16</value>
+	</data>
+	<data name="UInt32Txt">
+		<value>UInt32</value>
+	</data>
+	<data name="Int64Txt">
+		<value>Int64</value>
+	</data>
+	<data name="UInt64Txt">
+		<value>UInt64</value>
+	</data>
+	<data name="UnknownTxt">
+		<value>Määrittämättä</value>
+	</data>
+	<data name="DateTxt">
+		<value>Päivämäärä</value>
+	</data>
+	<data name="TimeTxt">
+		<value>Aika</value>
+	</data>
+	<data name="OctetStringTxt">
+		<value>OctetString</value>
+	</data>
+	<data name="IPAddressTxt">
+		<value>IP-osoite</value>
+	</data>
+	<data name="NameTxt">
+		<value>Nimi</value>
+	</data>
+	<data name="TypeTxt">
+		<value>Tyyppi</value>
+	</data>
+	<data name="UITypeTxt">
+		<value>Esitystyyppi</value>
+	</data>
+	<data name="InterfaceTxt">
+		<value>Interface</value>
+	</data>
+	<data name="AddressTxt">
+		<value>Osoite</value>
+	</data>
+	<data name="ManufacturerTypeTxt">
+		<value>Valmistajatyyppi</value>
+	</data>
+	<data name="PasswordTxt">
+		<value>Salasana</value>
+	</data>
+	<data name="AccessControlRequiredTxt">
+		<value>Pakollinen pääsynhallinta</value>
+	</data>
+	<data name="WizardPage1HeaderTxt">
+		<value>Valmistajan ja laitetyypin valinta</value>
+	</data>
+	<data name="WizardPage1DescriptionTxt">
+		<value>Valitse valmistajan ja laitteen tyyppi. Kuvaukset sisältävät oletusasetukset laitteelle.</value>
+	</data>
+	<data name="WaitTimeMsTxt">
+		<value>Odotusaika:</value>
+	</data>
+	<data name="SavePasswordTxt">
+		<value>Tallenna salasana laitekuvaukseen</value>
+	</data>
+	<data name="ShortNameTxt">
+		<value>Short Name</value>
+	</data>
+	<data name="LogicalNameTxt">
+		<value>Logical Name</value>
+	</data>
+  <data name="DeviceModeTxt">
+    <value>Device Mode</value>
+  </data>
+  <data name="DeviceModeSelectErrTxt">
+    <value>Device Mode on asetettava.</value>
+  </data>
+	<data name="ReadModeSelectErrTxt">
+		<value>Read Mode on asetettava.</value>
+	</data>
+</root>

@@ -1,0 +1,53 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.IEC62056-21.AddIn", "Gurux.IEC62056-21.AddIn.csproj", "{255C641E-EBC5-4996-9A91-5E285C4AEC11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.Common_2008", "..\..\GXCom\Gurux.Common\Development\Gurux.Common_2008.csproj", "{749652D4-4779-4869-AD81-5211A661CD1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.Communication_2008", "..\..\GXCom\Gurux.Communication\Development\Gurux.Communication_2008.csproj", "{BA05698E-DDAA-4D04-A6F0-6BC571805179}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.Device_2008", "..\..\GXCom\Gurux.Device\Development\Gurux.Device_2008.csproj", "{C4BB249E-A56A-4675-B406-864280D77BF3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.Net_2008", "..\..\GXCom\GXMedias\Gurux.Net\Development\Gurux.Net_2008.csproj", "{CB63EA09-D6BC-4B1D-927E-83041A222D54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gurux.Serial_2008", "..\..\GXCom\GXMedias\Gurux.Serial\Development\Gurux.Serial_2008.csproj", "{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}"
+EndProject
+Global
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = UnitTest_GuruxDLMS_20087.vsmdi
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{255C641E-EBC5-4996-9A91-5E285C4AEC11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{255C641E-EBC5-4996-9A91-5E285C4AEC11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{255C641E-EBC5-4996-9A91-5E285C4AEC11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{255C641E-EBC5-4996-9A91-5E285C4AEC11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{749652D4-4779-4869-AD81-5211A661CD1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{749652D4-4779-4869-AD81-5211A661CD1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{749652D4-4779-4869-AD81-5211A661CD1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{749652D4-4779-4869-AD81-5211A661CD1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA05698E-DDAA-4D04-A6F0-6BC571805179}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA05698E-DDAA-4D04-A6F0-6BC571805179}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA05698E-DDAA-4D04-A6F0-6BC571805179}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA05698E-DDAA-4D04-A6F0-6BC571805179}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4BB249E-A56A-4675-B406-864280D77BF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4BB249E-A56A-4675-B406-864280D77BF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4BB249E-A56A-4675-B406-864280D77BF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4BB249E-A56A-4675-B406-864280D77BF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB63EA09-D6BC-4B1D-927E-83041A222D54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB63EA09-D6BC-4B1D-927E-83041A222D54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB63EA09-D6BC-4B1D-927E-83041A222D54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB63EA09-D6BC-4B1D-927E-83041A222D54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
