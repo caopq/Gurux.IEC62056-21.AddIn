@@ -11,7 +11,7 @@ namespace Gurux.IEC62056_21.AddIn
 {
 	class IEC62056PacketHandler : Gurux.Device.IGXPacketHandler
 	{
-        [System.Runtime.InteropServices.DllImport("EncryptDll.dll")]
+        [System.Runtime.InteropServices.DllImport("Encrypt.dll")]
         public static extern int ENCRYPT(byte[] szEncryptPwd, byte[] szPassword, byte[] szKey);
 
 		int m_parseCount = 0;
