@@ -214,7 +214,7 @@ namespace Gurux.IEC62056_21.AddIn
         {
             if (m_Property is GXIEC62056Property)
             {                
-                ((GXIEC62056Property)m_Property).Address = AddressCb.Text;
+                ((GXIEC62056Property)m_Property).Data = AddressCb.Text;
                 ((GXIEC62056Property)m_Property).WriteMode = Convert.ToInt32((WriteModeDdl.SelectedIndex + 1).ToString());
                 ((GXIEC62056Property)m_Property).ReadMode = Convert.ToInt32((ReadModeDdl.SelectedIndex + 1).ToString());
             }
@@ -225,7 +225,7 @@ namespace Gurux.IEC62056_21.AddIn
                 address = address.Replace(")", "");
                 address = address.Replace("-", ".");
                 address = address.Replace(":", ".");
-                ((GXIEC62056TableProperty)m_Property).Address = address;
+                ((GXIEC62056TableProperty)m_Property).Data = address;
             }           
         }
 
@@ -240,7 +240,7 @@ namespace Gurux.IEC62056_21.AddIn
 			{
                 GXIEC62056TableProperty prop = m_Property  as GXIEC62056TableProperty;
 				AddressCb.Visible = WriteModeLbl.Visible = WriteModeDdl.Visible = ReadModeLbl.Visible = ReadModeDdl.Visible = false;
-				addressTb.Text = prop.Address;                
+				addressTb.Text = prop.Data;                
 			}
             else if (m_Property is GXIEC62056Property)
             {
@@ -258,7 +258,7 @@ namespace Gurux.IEC62056_21.AddIn
                 }                
                 if (AddressCb.SelectedIndex == -1)
                 {
-                    AddressCb.Text = prop.Address;
+                    AddressCb.Text = prop.Data;
                 }
             }
         }       

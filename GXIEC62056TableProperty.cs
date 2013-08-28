@@ -23,7 +23,7 @@ namespace Gurux.IEC62056_21.AddIn
 		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("OBIS code.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.None, ValueAccessType.None)]
-        public string Address
+        public string Data
 		{
 			get;
 			set;

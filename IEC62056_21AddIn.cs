@@ -14,6 +14,7 @@ using System.Xml;
 using System.Security.Cryptography;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Gurux.IEC62056_21.AddIn.Parser;
 
 // Old name: IEC1107
 namespace Gurux.IEC62056_21.AddIn
@@ -96,7 +97,7 @@ namespace Gurux.IEC62056_21.AddIn
 			if (parent is GXDevice)
 			{
 				GXIEC62056Device dev = parent as GXIEC62056Device;
-				if (dev.ProtocolMode == Protocol.ModeA)
+				if (dev.Mode == Protocol.ModeA)
 				{
                     return new Type[] { typeof(GXIEC62056ReadoutCategory) };					
 				}
@@ -119,286 +120,182 @@ namespace Gurux.IEC62056_21.AddIn
         public override void ImportFromDevice(Control[] addinPages, GXDevice device, Gurux.Common.IGXMedia media)
         {
             GXIEC62056Device dev = (GXIEC62056Device)device;
+            ImportSelectionDlg dlg = addinPages[1] as ImportSelectionDlg;
+            string deviceSerialNumber = dlg.DeviceSerialNumber;
+            int waittime = dev.WaitTime;
+            media.Open();
             try
             {
-                ImportSelectionDlg dlg = addinPages[1] as ImportSelectionDlg;
-                string deviceSerialNumber = dlg.DeviceSerialNumber;
-                //EOP = 4 when data block is read.
-                //EOP = 3 when all data is read.
-                //EOP = 0x10 when row is read.
-                //EOP = 0x15 when there is an error.
-                media.Eop = new byte[] { 0xA, 3, 4, 0x15 };
-                media.Open();                
-                //Some meters need this, do not remove.
-                System.Threading.Thread.Sleep(500);
-                List<byte> reply = new List<byte>();
-                lock (media.Synchronous)
+                string data = "/?" + deviceSerialNumber + "!\r\n";
+                byte[] reply = IEC62056Parser.Identify(media, data, '\0', waittime);
+                if (reply[0] != '/')
                 {
-                    int pos = 1;
-                    Progress(pos, 10);
-                    TraceLine("Handshake");
-                    IEC62056PacketHandler.GetData(media, device.WaitTime, "/?" + deviceSerialNumber + "!\r\n", reply, '\0');
-                    char baudRate = (char)reply[4];
-                    string CModeBauds = "0123456789";
-                    string BModeBauds = "ABCDEFGHI";
-                    char mode;
-                    if (CModeBauds.Contains(baudRate.ToString()))
-                    {
-                        dev.ProtocolMode = Protocol.ModeC;
-                        mode = 'C';
-                    }
-                    else if (BModeBauds.Contains(baudRate.ToString()))
-                    {
-                        dev.ProtocolMode = Protocol.ModeB;
-                        mode = 'B';
-                    }
-                    else
-                    {
-                        dev.ProtocolMode = Protocol.ModeA;
-                        mode = 'A';
-                        if (baudRate == ' ')
-                        {
-                            baudRate = '0';
-                        }
-                    }
-
-                    string data = ASCIIEncoding.ASCII.GetString(reply.ToArray());
-                    TraceLine("Found IEC device from Manufacturer: " + data.Substring(1, 3));
-                    TraceLine("Device model is: " + data.Substring(6).Trim());
-                    TraceLine("Device is supporting mode : " + mode);
-                    reply.Clear();
-                    if (dev.ProtocolMode != Protocol.ModeA)
-                    {
-                        ReceiveParameters<byte[]> p = new ReceiveParameters<byte[]>()
-                        {
-                            Count = 1,
-                            WaitTime = 500
-                        };
-                        data = (char)0x06 + "0" + baudRate + "1\r\n";
-                        IEC62056PacketHandler.GetData(media, device.WaitTime, data, reply, '\0');
-                        //Read crc if exists.
-                        media.Receive(p);
-                        //Try to read tables.
-                        //Read Load Profile.
-                        ReadTableColumns(device, media, "P.01", false);
-                        //Read Event Log.
-                        ReadTableColumns(device, media, "P.98", false);
-                    }
-                    else
-                    {
-                        byte[] tmp = reply.ToArray();
-                        //Read until EOP.
-                        do
-                        {
-                            Progress(++pos % 10, 10);
-                            if (tmp.Length != 0 && tmp[tmp.Length - 1] != 3)
-                            {
-                                string str = ASCIIEncoding.ASCII.GetString(tmp);
-                                int index = str.IndexOf('(');
-                                if (index != -1)
-                                {
-                                    str = str.Substring(0, index);
-                                }
-                                TraceLine("Reading Object " + str);
-                            }
-                            tmp = IEC62056PacketHandler.GetData(media, device.WaitTime, null, reply, '\0');
-                        }
-                        while (reply[reply.Count - 1] != 3);
-                        media.Eop = null;
-                        IEC62056PacketHandler.GetData(media, device.WaitTime, null, reply, '\0');
-                        if (reply[0] == 0x1 || reply[0] == 0x2)//Remove Bop if exista.
-                        {
-                            reply.RemoveAt(0);
-                        }
-                        byte crc = reply[reply.Count - 1];
-                        if (crc != 3)
-                        {
-                            //Remove crc.
-                            reply.RemoveAt(reply.Count - 1);
-                            byte checksum = Parser.IEC62056Parser.CalculateChecksum(reply.ToArray());
-                            if (checksum != crc)
-                            {
-                                throw new Exception("Import failed. Data is corrupted.");
-                            }
-                        }
-                    }
-                    //Remove Eop.
-                    reply.RemoveAt(reply.Count - 1);
-                    //Send quit.
-                    if (dev.ProtocolMode != Protocol.ModeA)
-                    {
-                        data = (char)0x01 + "B0" + (char)0x03 + "\r\n";
-                        media.Send(data, null);
-                    }
-                    media.Close();
-                    List<Parser.IECDataObject> items = Parser.IEC62056Parser.ParseReadout(reply);
+                    throw new Exception("Invalid reply.");
+                }
+                char baudRate = (char)reply[4];
+                string CModeBauds = "0123456789";
+                string BModeBauds = "ABCDEFGHI";
+                Protocol mode;
+                if (CModeBauds.IndexOf(baudRate) != -1)
+                {
+                    mode = Protocol.ModeC;
+                }
+                else if (BModeBauds.IndexOf(baudRate) != -1)
+                {
+                    mode = Protocol.ModeB;
+                }
+                else
+                {
+                    mode = Protocol.ModeA;
+                    baudRate = '0';
+                }
+                if (reply[0] != '/')
+                {
+                    throw new Exception("Import failed. Invalid reply.");
+                }
+                //If mode is not given.
+                if (dev.Mode == Protocol.None)
+                {
+                    dev.Mode = mode;
+                }
+                data = ASCIIEncoding.ASCII.GetString(reply.ToArray());                
+                string manufacturer = new string(new char[] { (char)reply[1], (char)reply[2], (char)reply[3] });
+                if (dev.Mode == Protocol.ModeA)
+                {
+                    data = (char)0x06 + "0" + baudRate + "0\r\n";
+                }
+                else
+                {
+                    data = (char)0x06 + "0" + baudRate + "1\r\n";
+                }
+                //Note this sleep is in standard. Do not remove.
+                if (media is Gurux.Serial.GXSerial)
+                {
+                    System.Threading.Thread.Sleep(200);
+                }
+                reply = IEC62056Parser.ParseHandshake(media, data, baudRate, waittime);
+                string header, frame;
+                IEC62056Parser.GetPacket(new List<byte>(reply), true, out header, out frame);
+                System.Diagnostics.Debug.WriteLine(frame);
+                if (header == "B0")
+                {
+                    throw new Exception("Connection failed. Meter do not accept connection at the moment.");
+                }
+                //Password is asked.
+                if (header == "P0")
+                {
+                    System.Diagnostics.Debug.WriteLine("Password is asked.");
+                }
+                //Note this sleep is in standard. Do not remove.
+                if (media is Gurux.Serial.GXSerial)
+                {
+                    System.Threading.Thread.Sleep(200);
+                }
+                if (dev.Mode == Protocol.ModeA)
+                {
+                    GXCategory defaultCategory = new GXIEC62056ReadoutCategory();
+                    defaultCategory.Name = "Readout";
+                    device.Categories.Add(defaultCategory);
+                }
+                else
+                {
                     GXCategory defaultCategory = null;
-                    if (dev.ProtocolMode == Protocol.ModeA)
+                    defaultCategory = new GXIEC62056Category();
+                    defaultCategory.Name = "Properties";
+                    device.Categories.Add(defaultCategory);
+                    foreach (string it in IEC62056Parser.GetGeneralOBISCodes())
                     {
-                        defaultCategory = new GXIEC62056ReadoutCategory();
-                        defaultCategory.Name = "Readout";
-                        device.Categories.Add(defaultCategory);
-                    }
-                    else
-                    {
-                        defaultCategory = new GXIEC62056Category();
-                        defaultCategory.Name = "Properties";
-                        device.Categories.Add(defaultCategory);
-                    }
-
-                    for (int i = 0; i < items.Count; ++i)
-                    {
-                        Parser.IECDataObject item = items[i];
-                        if (item.Address.Contains("*"))
+                        try
                         {
-                            items.RemoveAt(i--);
-                            continue;
+                            //Note this sleep is in standard. Do not remove.
+                            if (media is Gurux.Serial.GXSerial)
+                            {
+                                System.Threading.Thread.Sleep(200);
+                            }
+                            if (!it.StartsWith("P."))
+                            {
+                                IEC62056Parser.ReadValue(media, waittime, it + "()", 2);
+                                GXIEC62056Property prop = new GXIEC62056Property();
+                                prop.AccessMode = AccessMode.Read;
+                                prop.Name = IEC62056Parser.GetDescription(it);
+                                prop.Data = it;
+                                prop.ValueType = typeof(string);
+                                defaultCategory.Properties.Add(prop);
+                                TraceLine("Property " + prop.Name + " added.");
+                            }
+                            else
+                            {
+                                List<KeyValuePair<string, List<object>>> rows;
+                                //Try to read last hour first.
+                                TimeSpan add = new TimeSpan(1, 0, 0);
+                                DateTime start = DateTime.Now.Add(-add);
+                                do
+                                {
+                                    try
+                                    {
+                                        rows = IEC62056Parser.ReadTable(media, waittime, it, start, DateTime.Now, null, 6, 1);
+                                    }
+                                    catch
+                                    {
+                                        rows = null;
+                                    }
+                                    if (rows == null)
+                                    {
+                                        if (add.TotalHours == 1)
+                                        {
+                                            //Try to read last day.
+                                            add = new TimeSpan(1, 0, 0, 0);
+                                            start = DateTime.Now.Add(-add);
+                                        }
+                                        else if (add.TotalHours == 24)
+                                        {
+                                            //Try to read last month.
+                                            add = new TimeSpan(31, 0, 0, 0);
+                                            start = DateTime.Now.Add(-add);
+                                        }
+                                        else if (add.TotalDays == 31)
+                                        {
+                                            //Read all.
+                                            start = DateTime.MinValue;                                            
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        GXIEC62056Table table = new GXIEC62056Table();
+                                        table.Name = IEC62056Parser.GetDescription(it);
+                                        table.Data = it;
+                                        table.ReadMode = 6;
+                                        foreach (KeyValuePair<string, List<object>> col in rows)
+                                        {
+                                            GXIEC62056TableProperty prop = new GXIEC62056TableProperty();
+                                            prop.Name = IEC62056Parser.GetDescription(col.Key);
+                                            prop.Data = col.Key;
+                                            prop.ValueType = col.Value[0].GetType();
+                                            table.Columns.Add(prop);
+                                        }
+                                        device.Tables.Add(table);
+                                        TraceLine("Property " + table.Name + " added.");
+                                        break;
+                                    }
+                                }
+                                while (rows == null);
+                            }
                         }
-                        if (dev.ProtocolMode == Protocol.ModeA)
+                        catch (Exception ex)
                         {
-                            GXIEC62056ReadoutProperty prop = new GXIEC62056ReadoutProperty();
-                            prop.AccessMode = AccessMode.Read;
-                            prop.Name = item.Address;
-                            prop.Address = item.Address;
-                            prop.Unit = item.Unit;
-                            prop.ValueType = typeof(string);
-                            defaultCategory.Properties.Add(prop);
-                        }
-                        else
-                        {
-                            GXIEC62056Property prop = new GXIEC62056Property();
-                            prop.AccessMode = AccessMode.Read;
-                            prop.Name = item.Address;
-                            prop.Address = item.Address;
-                            prop.Unit = item.Unit;
-                            prop.ValueType = typeof(string);
-                            defaultCategory.Properties.Add(prop);
+                            System.Diagnostics.Debug.WriteLine(ex.Message);                            
                         }
                     }
                 }
             }
             finally
             {
-                //Send quit if not send yet.
-                if (media.IsOpen && dev.ProtocolMode != Protocol.ModeA)
-                {
-                    string data = (char)0x01 + "B0" + (char)0x03 + "\r\n";
-                    media.Send(data, null);
-                }
-            }
-        }
 
-        private static void ReadTableColumns(GXDevice device, Gurux.Common.IGXMedia media, string tableAddress, bool all)
-        {
-            try
-            {
-                List<byte> reply = new List<byte>();
-                ReceiveParameters<byte[]> p = new ReceiveParameters<byte[]>()
-                {
-                    Count = 1,
-                    WaitTime = 500
-                };
-                string data;
-                if (all)
-                {
-                    data = (char)1 + "R6" + (char)2 + tableAddress + "(;;1)" + (char)3;
-                }
-                else
-                {
-                    data = (char)1 + "R6" + (char)2 + tableAddress + "(" + Parser.IEC62056Parser.DateTimeToString(DateTime.Now.Date, false) + ";" +
-                        Parser.IEC62056Parser.DateTimeToString(DateTime.Now.AddDays(1).Date, false) + ";1)" + (char)3;
-                }
-                List<byte> bytes = new List<byte>(ASCIIEncoding.ASCII.GetBytes(data));
-                bytes.RemoveAt(0);
-                char checksum = (char)Parser.IEC62056Parser.CalculateChecksum(bytes.ToArray());
-                data += checksum;
-                List<byte> allData = new List<byte>();
-                List<byte> block = new List<byte>();
-                while (true)
-                {
-                    reply.Clear();
-                    IEC62056PacketHandler.GetData(media, device.WaitTime, data, reply, '\0');
-                    //Remove Bop if exists.
-                    byte bop = reply[0];
-                    if (bop == 0x2)
-                    {
-                        reply.RemoveAt(0);
-                    }
-                    byte eop = reply[reply.Count - 1];
-                    //If more data available.
-                    if (eop == 0xA)
-                    {
-                        block.AddRange(reply);
-                        data = null;
-                    }
-                    else
-                    {
-                        if (eop == 3)
-                        {
-                            block.AddRange(reply);
-                            //Read crc.
-                            p.Reply = null;
-                            p.Count = 1;
-                            if (media.Receive(p))
-                            {
-                                byte checksum2 = Parser.IEC62056Parser.CalculateChecksum(block.ToArray());
-                                if (checksum2 != p.Reply[0])
-                                {
-                                    throw new Exception("Import failed. Data is corrupted.");
-                                }
-                            }
-                            allData.AddRange(block);
-                            block.Clear();
-                            List<Parser.IECDataObject> columns = Parser.IEC62056Parser.ParseTable(tableAddress, allData, false);
-                            GXIEC62056Table table = new GXIEC62056Table();
-                            table.Address = tableAddress;
-                            table.Name = tableAddress;
-                            foreach (Parser.IECDataObject it in columns)
-                            {
-                                GXIEC62056TableProperty tp = new GXIEC62056TableProperty();
-                                if (string.IsNullOrEmpty(it.Address))
-                                {
-                                    it.Address = "Unknown";
-                                }
-                                tp.ValueType = typeof(string);
-                                tp.Name = it.Address;
-                                table.Columns.Add(tp);
-                            }
-                            device.Tables.Add(table);
-                            break;
-                        }
-                        else if (eop == 4)
-                        {
-                            block.AddRange(reply);
-                            //Read crc.
-                            p.Reply = null;
-                            p.Count = 1;
-                            if (media.Receive(p))
-                            {
-                                byte checksum2 = Parser.IEC62056Parser.CalculateChecksum(block.ToArray());
-                                if (checksum2 != p.Reply[0])
-                                {
-                                    throw new Exception("Import failed. Data is corrupted.");
-                                }
-                            }
-                            allData.AddRange(block);
-                            block.Clear();
-                            data = (char)6 + "";
-                        }
-                        else
-                        {
-                            block.AddRange(reply);
-                        }
-                    }
-                }
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                if (!all)
-                {
-                    ReadTableColumns(device, media, tableAddress, true);
-                }
-            }
+            }            
         }
 
         public override void ModifyWizardPages(object source, GXPropertyPageType type, List<Control> pages)

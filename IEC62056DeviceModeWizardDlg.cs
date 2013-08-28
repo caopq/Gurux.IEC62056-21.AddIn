@@ -186,7 +186,7 @@ namespace Gurux.IEC62056_21.AddIn
                 {
                     throw new Exception("Invalid protocol mode.");             
                 }
-                m_Device.ProtocolMode = (Protocol)typeCb.SelectedItem;
+                m_Device.Mode = (Protocol)typeCb.SelectedItem;
             }
         }
 

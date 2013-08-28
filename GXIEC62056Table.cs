@@ -21,37 +21,45 @@ namespace Gurux.IEC62056_21.AddIn
 		public GXIEC62056Table()
 		{
             ((IGXPartialRead)this).Type = PartialReadType.New | PartialReadType.All | PartialReadType.Last | PartialReadType.Range;
-			ReadMode = "6";
+			ReadMode = 6;
+            ReadCount = 1;
 		}
 		
 		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("OBIS code.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.None, ValueAccessType.None)]
-		public string Address
+		public string Data
 		{
 			get;
 			set;
 		}
 
-		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Read Mode.")]
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Data parameter")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public string Parameters
+        {
+            get;
+            set;
+        }
+
+		[ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Read Mode.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
-		public string ReadMode
+		public int ReadMode
 		{
 			get;
 			set;
 		}
 
-		private GXIEC62056TableProperty CreateTableProperty(string name, string obisCode, string unit)
-		{
-			name = name.Replace('-', '.');
-			name = name.Replace(':', '.');
-			GXIEC62056TableProperty prop = new GXIEC62056TableProperty();
-			prop.Name = name;
-			prop.Address = obisCode;
-			this.Columns.Add(prop);
-			return prop;
-		}
+        [ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("How many rows are read in mode 6. at the time")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public int ReadCount
+        {
+            get;
+            set;
+        }	
 
         #region IGXPartialRead Members
 

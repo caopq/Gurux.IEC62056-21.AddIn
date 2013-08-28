@@ -23,16 +23,25 @@ namespace Gurux.IEC62056_21.AddIn
             this.ValueType = typeof(string);
 		}
 
-		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("OBIS code.")]
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("OBIS code.")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public string Data
+        {
+            get;
+            set;
+        }
+
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Data parameter")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
-		public string Address
+		public string Parameters
 		{
 			get;
 			set;
 		}
 
-		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Read Mode.")]
+		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Read command type.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
 		public int ReadMode
@@ -41,7 +50,7 @@ namespace Gurux.IEC62056_21.AddIn
 			set;
 		}
 
-		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Write Mode.")]
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Write command type.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
 		public int WriteMode

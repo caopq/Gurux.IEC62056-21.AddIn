@@ -3,6 +3,7 @@ using Gurux.Device.Editor;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using Gurux.Device;
+using Gurux.Net;
 
 namespace Gurux.IEC62056_21.AddIn
 {
@@ -10,8 +11,8 @@ namespace Gurux.IEC62056_21.AddIn
 	/// Extends Gurux.Device.GXDevice class with the IEC specific properties.
 	/// </summary>
 	[DataContract()]
-	[GXInitialActionMessage(InitialActionType.Connected, "InitRead", Index = 1)]
-    [GXInitialActionMessage(InitialActionType.Disconnecting, "Disconnect", Index = 1)]
+	[GXInitialActionMessage(InitialActionType.Connected, "Connect", Index = 1)]
+    [GXInitialActionMessage(InitialActionType.Disconnecting, "Disconnect", "DisconnectReply", Index = 1)]
 	public class GXIEC62056Device : Gurux.Device.GXDevice
 	{
 		/// <summary>
@@ -19,7 +20,7 @@ namespace Gurux.IEC62056_21.AddIn
 		/// </summary>
 		public GXIEC62056Device()
 		{
-            ProtocolMode = Protocol.None;
+            this.Mode = Protocol.None;
             SerialNumber = "";
 			this.GXClient.Bop = (byte)0x1;
 			this.GXClient.Eop = (byte)0x3;
@@ -45,7 +46,11 @@ namespace Gurux.IEC62056_21.AddIn
 			this.AllowedMediaTypes.Clear();
 
 			GXMediaType media = new GXMediaType();
+            GXNet net = new GXNet();
+            net.Protocol = NetworkType.Tcp;
+            net.Port = 1000;
 			media.Name = "Net";
+            media.DefaultMediaSettings = net.Settings;
 			this.AllowedMediaTypes.Add(media);
 
 			media = new GXMediaType();
@@ -62,7 +67,7 @@ namespace Gurux.IEC62056_21.AddIn
         [DefaultValue(Protocol.None), Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("Is Programming Mode supported.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
-        public Protocol ProtocolMode
+        public Protocol Mode
 		{
 			get;
 			set;
@@ -89,13 +94,17 @@ namespace Gurux.IEC62056_21.AddIn
 		}
 
         /// <summary>
-        /// Meter manufacturer.
+        /// If meter is using custom data format.
         /// </summary>
-        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
-        public Manufacturer Manufacturer
-		{
-			get;
-			set;
-		}
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("If meter is using custom data format.")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.Edit)]
+        public bool CustomDataFormat
+        {
+            get;
+            set;
+        }
+
+
 	}
 }
