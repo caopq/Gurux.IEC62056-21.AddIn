@@ -5,7 +5,6 @@ using Gurux.Device;
 using Gurux.Communication;
 using System.Windows.Forms;
 using Gurux.Net;
-using Gurux.Serial;
 
 namespace Gurux.IEC62056_21.AddIn
 {
@@ -27,7 +26,11 @@ namespace Gurux.IEC62056_21.AddIn
             {
                 //Skip echo.
                 e.Accept = !Gurux.IEC62056_21.AddIn.Parser.IEC62056Parser.EqualBytes(
-                    e.Send.ExtractPacket(), e.Received.ExtractPacket());               
+                    e.Send.ExtractPacket(), e.Received.ExtractPacket());
+                if (!e.Accept)
+                {
+                    e.Description = "Echo removed.";
+                }
             }
 		}
 
@@ -50,7 +53,7 @@ namespace Gurux.IEC62056_21.AddIn
 		public void ParsePacketFromData(object sender, GXParsePacketEventArgs e)
 		{
 			e.Packet.Status = PacketStates.TransactionTimeReset;
-            string header, data;
+            string header, data;            
             byte[] reply = Parser.IEC62056Parser.GetPacket(new List<byte>(e.Data), false, out header, out data);            
             if (reply != null)
             {
@@ -127,24 +130,9 @@ namespace Gurux.IEC62056_21.AddIn
 
 		public void InitializeMedia(object sender, Gurux.Common.IGXMedia media)
 		{
-            if (media is GXSerial)
-            {
-                GXSerial serial = media as GXSerial;
-                serial.ConfigurableSettings = Gurux.Serial.AvailableMediaSettings.All;
-                /*
-                serial.BaudRate = 300;
-                serial.DataBits = 7;
-                serial.Parity = System.IO.Ports.Parity.Even;
-                serial.StopBits = System.IO.Ports.StopBits.One;
-                 * */
-            }
-            else if (media is GXNet)
+            if (media is GXNet)
             {
                 GXNet net = media as GXNet;
-                /*
-                net.Protocol = NetworkType.Tcp;
-                net.Port = 1000;
-                 * */
                 net.ConfigurableSettings = Gurux.Net.AvailableMediaSettings.Port | Gurux.Net.AvailableMediaSettings.Host;
             }
 		}

@@ -27,6 +27,8 @@ namespace Gurux.IEC62056_21.AddIn
         /// </summary>
         int Add = 0;
 
+        string[] Columns;
+
         public object Parent
         {
             get;
@@ -51,6 +53,7 @@ namespace Gurux.IEC62056_21.AddIn
 				case "ReadTableData":
                     Status = 0;
                     Add = 0;
+                    Columns = null;
                     GXIEC62056Table table = (GXIEC62056Table)sender;
                     table.ClearRows();
 					ReadTableData(sender, packet);
@@ -60,7 +63,7 @@ namespace Gurux.IEC62056_21.AddIn
 					break;
                 case "Connect":
                     GXIEC62056Device dev = GetDevice(sender);
-                    Connect(dev.SerialNumber, dev.Mode, dev.GXClient.Media, dev.WaitTime);
+                    Connect(dev.SerialNumber, dev.Password, dev.Mode, dev.GXClient.Media, dev.WaitTime);
 					break;
                 case "Disconnect":
                     Disconnect(GetDevice(sender), packet);
@@ -71,6 +74,9 @@ namespace Gurux.IEC62056_21.AddIn
 				case "ReadData":
 					ReadData(sender, packet);
 					break;
+                case "KeepAlive":
+                    KeepAlive(sender as GXIEC62056Device, packet);
+					break;                    
 				default:
 					throw new Exception("ExecuteCommand failed. Unknown command: " + command);
 			}
@@ -88,7 +94,10 @@ namespace Gurux.IEC62056_21.AddIn
 					break;
                 case "DisconnectReply":
                     DisconnectReply(sender, packets);
-					break;                    
+					break;
+                case "KeepAliveReply":
+                    KeepAliveReply(sender as GXIEC62056Device, packets);
+					break;
 				default:
 					throw new Exception("ExecuteCommand failed. Unknown command: " + command);
 			}
@@ -116,12 +125,66 @@ namespace Gurux.IEC62056_21.AddIn
 
 		public object DeviceValueToUIValue(GXProperty sender, object value)
 		{
-            if (sender.ValueType == typeof(DateTime) && !(value is DateTime))
-			{
-				return Parser.IEC62056Parser.StringToDateTime(value.ToString());
-			}
-			return value;
+            DataType dt = (sender as GXIEC62056Property).DataType;
+            if (!(value is DateTime))
+            {                
+                if (dt == DataType.DateTime)
+                {
+                    return Parser.IEC62056Parser.StringToDateTime(value.ToString());
+                }
+                else if (dt == DataType.Date)
+                {
+                    return Parser.IEC62056Parser.StringToDateTime(value.ToString()).ToShortDateString();
+                }
+                else if (dt == DataType.Time)
+                {
+                    return Parser.IEC62056Parser.StringToTime(value.ToString());
+                }
+            }
+            if (dt == DataType.OctetString)
+            {
+                value = ASCIIEncoding.ASCII.GetString(GXCommon.HexToBytes(value.ToString(), false));
+            }
+            return value;
 		}
+
+        private void KeepAlive(GXIEC62056Device device, GXPacket packet)
+        {
+            if (device.AliveMode == 0)
+            {
+                packet.AppendData("R2");
+                packet.AppendData((byte)2);
+                packet.AppendData("0.0.0()");
+            }
+            else
+            {
+                packet.AppendData("R" + device.AliveMode.ToString());
+                packet.AppendData((byte)2);
+                packet.AppendData(device.AliveData + "(" + device.AliveParameters + ")");
+            }
+        }
+
+        private void KeepAliveReply(GXIEC62056Device sender, GXPacket[] packets)
+        {
+            List<byte> fullData = new List<byte>();
+            foreach (GXPacket packet in packets)
+            {
+                object tmp = null;
+                tmp = packet.ExtractData(typeof(byte[]), 0, -1);
+                if (tmp is byte[])
+                {
+                    fullData.AddRange(tmp as byte[]);
+                }
+            }
+
+            string val = ASCIIEncoding.ASCII.GetString(fullData.ToArray());
+            int start = val.IndexOf('(');
+            int end = val.LastIndexOf(')');
+            if (start != -1 && end != -1)
+            {
+                val = val.Substring(start + 1, end - start - 1);
+            }
+        }
 
 		private void ReadData(object sender, GXPacket packet)
 		{
@@ -130,7 +193,7 @@ namespace Gurux.IEC62056_21.AddIn
 				return;
 			}
             GXIEC62056Property prop = sender as GXIEC62056Property;
-            packet.AppendData("R" + prop.ReadMode);
+            packet.AppendData("R" + prop.ReadMode.ToString());
             packet.AppendData((byte)2);
             packet.AppendData(prop.Data + "(" + prop.Parameters + ")");
 		}
@@ -263,7 +326,8 @@ namespace Gurux.IEC62056_21.AddIn
 			}
 			if (dev.Mode != Protocol.ModeA)
 			{
-                packet.Eop = "\r\n";
+                packet.ResendCount = -1;
+                packet.Eop = null;
                 packet.ChecksumSettings.Position = -3;
                 packet.ChecksumSettings.Count = -3;
                 packet.AppendData("B0");
@@ -274,12 +338,12 @@ namespace Gurux.IEC62056_21.AddIn
         private void DisconnectReply(object sender, GXPacket[] packets)
 		{
             string header, data;
-            List<byte> buff = new List<byte>(packets[0].ExtractPacket());
+            List<byte> buff = new List<byte>(packets[0].ExtractPacket());            
             IEC62056Parser.GetPacket(buff, true, out header, out data);        
         }
         
 
-        private void Connect(string serialNumber, Protocol protocol, IGXMedia media, int waittime)
+        private void Connect(string serialNumber, string password, Protocol protocol, IGXMedia media, int waittime)
 		{
             string data = "/?" + serialNumber + "!\r\n";
             byte[] reply = IEC62056Parser.Identify(media, data, '\0', waittime);            
@@ -319,21 +383,59 @@ namespace Gurux.IEC62056_21.AddIn
                 data = (char)0x06 + "0" + baudRate + "1\r\n";
             }            
             //Note this sleep is in standard. Do not remove.
-            System.Threading.Thread.Sleep(200);
+            System.Threading.Thread.Sleep(300);
             reply = IEC62056Parser.ParseHandshake(media, data, baudRate, waittime);
-            string header, frame;
+            string header, frame;            
             IEC62056Parser.GetPacket(new List<byte>(reply), true, out header, out frame);
             System.Diagnostics.Debug.WriteLine(frame);
             if (header == "B0")
             {
                 throw new Exception("Connection failed. Meter do not accept connection at the moment.");
             }
-            //Password is asked.
-            if (header == "P0")
+            //Password is asked and it is given.
+            if (header == "P0" && !string.IsNullOrEmpty(password))
             {
                 System.Diagnostics.Debug.WriteLine("Password is asked.");
+                //If Elster A1700
+                if (manufacturer.Equals("GEC"))
+                {
+                    password = ElsterEncrypt(password, frame);
+                }
+                data = (char)1 + "P2" + (char)2 + "(" + password + ")" + (char)3;
+                List<byte> tmp = new List<byte>(ASCIIEncoding.ASCII.GetBytes(data));
+                data = data + (char) IEC62056Parser.CalculateChecksum(tmp, 1, -1);
+                reply = IEC62056Parser.Read(media, data, baudRate, waittime, true);
+                if (reply == null || (reply.Length != 1 && reply[0] != 6))
+                {
+                    throw new Exception("Connection failed. Invalid password.");
+                }
             }
 		}
+
+        /// <summary>
+        /// Encrypt Elster PW for A1700.
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="seed"></param>
+        /// <returns></returns>
+        string ElsterEncrypt(string password, string seed)
+        {
+            //Convert hex string to byte array.
+            byte[] s = GXCommon.HexToBytes(seed, false);
+            byte[] crypted = new byte[8];
+            for (int pos = 0; pos != 8; ++pos)
+            {
+                crypted[pos] = (byte)(password[pos] ^ s[pos]);
+            }
+            int last = crypted[7];
+            for (int pos = 0; pos != 8; ++pos)
+            {
+                long tmp = (crypted[pos] + last) & 0x800000FF;
+                crypted[pos] = (byte)((crypted[pos] + last) & 0xFF);
+                last = crypted[pos];
+            }
+            return GXCommon.ToHex(crypted, false);
+        }
 
 		private void ReadTableData(object sender, GXPacket packet)
 		{
@@ -348,8 +450,7 @@ namespace Gurux.IEC62056_21.AddIn
             if ((sender as GXIEC62056Table).ReadMode != 6)
             {
                 GXIEC62056Table table = (GXIEC62056Table)sender;
-                string[] columns;
-                object[][] rows = Parser.IEC62056Parser.ParseTableData(packets[packets.Length - 1].ExtractPacket(), out columns, ref Status, ref Time, ref Add);
+                object[][] rows = Parser.IEC62056Parser.ParseTableData(packets[packets.Length - 1].ExtractPacket(), ref Columns, ref Status, ref Time, ref Add, table.Data);
                 table.AddRows(table.RowCount, new List<object[]>(rows), false);
             }
 		}
@@ -359,10 +460,9 @@ namespace Gurux.IEC62056_21.AddIn
 			if ((sender as GXIEC62056Table).ReadMode == 6)
 			{
                 GXIEC62056Table table = (GXIEC62056Table)sender;
-                string[] columns;
-                object[][] rows = Parser.IEC62056Parser.ParseTableData(packet.ExtractPacket(), out columns, ref Status, ref Time, ref Add);
-                table.AddRows(table.RowCount, new List<object[]>(rows), false);                                
-                System.Threading.Thread.Sleep(200);
+                object[][] rows = Parser.IEC62056Parser.ParseTableData(packet.ExtractPacket(), ref Columns, ref Status, ref Time, ref Add, table.Data);
+                System.Diagnostics.Debug.WriteLine("Mikko " + rows.Length);
+                table.AddRows(table.RowCount, new List<object[]>(rows), false);                
             }            
             return (byte) packet.Eop != 0x4;
 		}

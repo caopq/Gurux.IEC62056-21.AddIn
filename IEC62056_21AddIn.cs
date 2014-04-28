@@ -32,7 +32,7 @@ namespace Gurux.IEC62056_21.AddIn
 			: base("IEC 62056-21", false, true, false)
 		{   
             base.WizardAvailable = VisibilityItems.None;             
-        }
+        }        
 
 		public override VisibilityItems ItemVisibility
 		{
@@ -66,7 +66,7 @@ namespace Gurux.IEC62056_21.AddIn
 		{
 			if (parent == null)
 			{
-				return new Type[] { typeof(GXIEC62056Property), typeof(GXIEC62056TableProperty), typeof(GXIEC62056ReadoutProperty) };
+				return new Type[] { typeof(GXIEC62056Property), typeof(GXIEC62056ReadoutProperty) };
 			}
 			if (parent is GXIEC62056ReadoutCategory)
 			{
@@ -74,7 +74,7 @@ namespace Gurux.IEC62056_21.AddIn
 			}
 			else if (parent is GXIEC62056Table)
 			{
-				return new Type[] { typeof(GXIEC62056TableProperty) };
+                return new Type[] { typeof(GXIEC62056Property) };
 			}
 			else
 			{
@@ -169,12 +169,12 @@ namespace Gurux.IEC62056_21.AddIn
                     data = (char)0x06 + "0" + baudRate + "1\r\n";
                 }
                 //Note this sleep is in standard. Do not remove.
-                if (media is Gurux.Serial.GXSerial)
+                if (media.MediaType == "Serial")
                 {
                     System.Threading.Thread.Sleep(200);
                 }
                 reply = IEC62056Parser.ParseHandshake(media, data, baudRate, waittime);
-                string header, frame;
+                string header, frame;                
                 IEC62056Parser.GetPacket(new List<byte>(reply), true, out header, out frame);
                 System.Diagnostics.Debug.WriteLine(frame);
                 if (header == "B0")
@@ -187,7 +187,7 @@ namespace Gurux.IEC62056_21.AddIn
                     System.Diagnostics.Debug.WriteLine("Password is asked.");
                 }
                 //Note this sleep is in standard. Do not remove.
-                if (media is Gurux.Serial.GXSerial)
+                if (media.MediaType == "Serial")
                 {
                     System.Threading.Thread.Sleep(200);
                 }
@@ -214,67 +214,99 @@ namespace Gurux.IEC62056_21.AddIn
                             }
                             if (!it.StartsWith("P."))
                             {
-                                IEC62056Parser.ReadValue(media, waittime, it + "()", 2);
-                                GXIEC62056Property prop = new GXIEC62056Property();
-                                prop.AccessMode = AccessMode.Read;
-                                prop.Name = IEC62056Parser.GetDescription(it);
-                                prop.Data = it;
-                                prop.ValueType = typeof(string);
-                                defaultCategory.Properties.Add(prop);
-                                TraceLine("Property " + prop.Name + " added.");
+                                string value = IEC62056Parser.ReadValue(media, waittime, it + "()", 2);
+                                if (!Convert.ToString(value).StartsWith("ER"))
+                                {
+                                    GXIEC62056Property prop = new GXIEC62056Property();
+                                    prop.AccessMode = AccessMode.Read;
+                                    prop.ReadMode = dev.ReadMode;
+                                    prop.WriteMode = dev.WriteMode;
+                                    prop.Name = IEC62056Parser.GetDescription(it);
+                                    prop.Data = it;
+                                    prop.DataType = IEC62056Parser.GetDataType(it);
+                                    if (prop.DataType == DataType.DateTime ||
+                                        prop.DataType == DataType.Date ||
+                                        prop.DataType == DataType.Time)
+                                    {
+                                        prop.ValueType = typeof(DateTime);
+                                    }
+                                    defaultCategory.Properties.Add(prop);
+                                    TraceLine("Property " + prop.Name + " added.");
+                                }
                             }
                             else
                             {
-                                List<KeyValuePair<string, List<object>>> rows;
+                                object[][] rows;
                                 //Try to read last hour first.
                                 TimeSpan add = new TimeSpan(1, 0, 0);
                                 DateTime start = DateTime.Now.Add(-add);
+                                string[] columns = null;
                                 do
                                 {
                                     try
                                     {
-                                        rows = IEC62056Parser.ReadTable(media, waittime, it, start, DateTime.Now, null, 6, 1);
+                                        rows = IEC62056Parser.ReadTable(media, waittime, it, start, DateTime.Now, null, 5, 1, out columns);
                                     }
                                     catch
                                     {
-                                        rows = null;
+                                        //If media is closed.
+                                        if (!media.IsOpen)
+                                        {
+                                            break;
+                                        }
+                                        rows = new object[0][];
                                     }
-                                    if (rows == null)
+                                    if (rows.Length == 0)
                                     {
                                         if (add.TotalHours == 1)
                                         {
                                             //Try to read last day.
                                             add = new TimeSpan(1, 0, 0, 0);
-                                            start = DateTime.Now.Add(-add);
+                                            start = DateTime.Now.Add(-add).Date;
                                         }
                                         else if (add.TotalHours == 24)
                                         {
+                                            //Try to read last week.
+                                            add = new TimeSpan(7, 0, 0, 0);
+                                            start = DateTime.Now.Add(-add).Date;
+                                        }
+                                        else if (add.TotalDays == 7)
+                                        {
                                             //Try to read last month.
                                             add = new TimeSpan(31, 0, 0, 0);
-                                            start = DateTime.Now.Add(-add);
+                                            start = DateTime.Now.Add(-add).Date;
                                         }
                                         else if (add.TotalDays == 31)
                                         {
                                             //Read all.
+                                            add = new TimeSpan(100, 0, 0, 0);
                                             start = DateTime.MinValue;                                            
                                         }
                                         else
                                         {
                                             break;
                                         }
+                                        //Note this sleep is in standard. Do not remove.
+                                        if (media is Gurux.Serial.GXSerial)
+                                        {
+                                            System.Threading.Thread.Sleep(200);
+                                        }
                                     }
                                     else
                                     {
                                         GXIEC62056Table table = new GXIEC62056Table();
                                         table.Name = IEC62056Parser.GetDescription(it);
+                                        table.AccessMode = AccessMode.Read;
                                         table.Data = it;
                                         table.ReadMode = 6;
-                                        foreach (KeyValuePair<string, List<object>> col in rows)
+                                        int index = -1;
+                                        foreach (string col in columns)
                                         {
-                                            GXIEC62056TableProperty prop = new GXIEC62056TableProperty();
-                                            prop.Name = IEC62056Parser.GetDescription(col.Key);
-                                            prop.Data = col.Key;
-                                            prop.ValueType = col.Value[0].GetType();
+                                            GXIEC62056Property prop = new GXIEC62056Property();
+                                            prop.Name = col;
+                                            //Mikko prop.Name = IEC62056Parser.GetDescription(col);
+                                            prop.Data = col;
+                                            prop.ValueType = rows[0][++index].GetType();
                                             table.Columns.Add(prop);
                                         }
                                         device.Tables.Add(table);
@@ -282,7 +314,7 @@ namespace Gurux.IEC62056_21.AddIn
                                         break;
                                     }
                                 }
-                                while (rows == null);
+                                while (rows.Length == 0);
                             }
                         }
                         catch (Exception ex)
@@ -294,7 +326,11 @@ namespace Gurux.IEC62056_21.AddIn
             }
             finally
             {
-
+                if (media.MediaType == "Serial" || media.MediaType == "Terminal")
+                {
+                   IEC62056Parser.Disconnect(media, 2);
+                }
+                media.Close();
             }            
         }
 

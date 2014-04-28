@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <ProjectType>Local</ProjectType>
     <ProductVersion>9.0.30729</ProductVersion>
@@ -29,7 +29,7 @@
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <OldToolsVersion>2.0</OldToolsVersion>
+    <OldToolsVersion>3.5</OldToolsVersion>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -93,19 +93,18 @@
     <Compile Include="AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DataType.cs" />
     <Compile Include="GXIEC62056Category.cs" />
-    <Compile Include="GXObisItem.cs" />
     <Compile Include="GXIEC62056ReadoutCategory.cs" />
     <Compile Include="GXIEC62056ReadoutProperty.cs" />
-    <Compile Include="GXIEC62056TableProperty.cs" />
     <Compile Include="IEC62056DeviceModeWizardDlg.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="IEC62056PacketHandler.cs" />
     <Compile Include="IEC62056PacketParser.cs" />
     <Compile Include="IEC62056_21AddIn.cs" />
+    <Compile Include="Manufacturer.cs" />
     <Compile Include="Parser\IEC62056Parser.cs" />
-    <Compile Include="GXIEC62056InitProperty.cs" />
     <Compile Include="GXIEC62056Table.cs" />
     <Compile Include="Parser\IEcDataObject.cs" />
     <Compile Include="GXIEC62056Device.cs">

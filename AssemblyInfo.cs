@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Gurux Ltd")]
 [assembly: AssemblyProduct("Gurux IEC62056-21 AddIn")]
-[assembly: AssemblyCopyright("Copyright (C) 1998-2013 Gurux Ltd.")]
+[assembly: AssemblyCopyright("Copyright (C) 1998-2014 Gurux Ltd.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]		
 
@@ -19,5 +19,5 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyDelaySign(false)]
 [assembly: AssemblyKeyFile("")]
 [assembly: AssemblyKeyName("")]
-[assembly: AssemblyFileVersion("7.0.8.1")]
-[assembly: AssemblyVersion("7.0.8.1")]
+[assembly: AssemblyFileVersion("1.1.19.1")]
+[assembly: AssemblyVersion("1.1.19.1")]

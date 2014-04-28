@@ -3,7 +3,6 @@ using Gurux.Device.Editor;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using Gurux.Device;
-using Gurux.Net;
 
 namespace Gurux.IEC62056_21.AddIn
 {
@@ -11,6 +10,7 @@ namespace Gurux.IEC62056_21.AddIn
 	/// Extends Gurux.Device.GXDevice class with the IEC specific properties.
 	/// </summary>
 	[DataContract()]
+    [GXInitialActionMessage(InitialActionType.KeepAlive, "KeepAlive", "KeepAliveReply")]
 	[GXInitialActionMessage(InitialActionType.Connected, "Connect", Index = 1)]
     [GXInitialActionMessage(InitialActionType.Disconnecting, "Disconnect", "DisconnectReply", Index = 1)]
 	public class GXIEC62056Device : Gurux.Device.GXDevice
@@ -20,6 +20,9 @@ namespace Gurux.IEC62056_21.AddIn
 		/// </summary>
 		public GXIEC62056Device()
 		{
+            this.Keepalive.Ignore = KeepaliveFieldsIgnored.Reset;
+            MaximumBaudRate = 0;
+            ReadMode = WriteMode = 2;
             this.Mode = Protocol.None;
             SerialNumber = "";
 			this.GXClient.Bop = (byte)0x1;
@@ -37,34 +40,59 @@ namespace Gurux.IEC62056_21.AddIn
 			this.GXClient.ChecksumSettings.Reflection = false;
 			this.GXClient.ChecksumSettings.Start = 1;
 			this.GXClient.ByteOrder = Gurux.Communication.ByteOrder.BigEndian;
-
 			SetAllowedMediaTypes();
 		}
 
 		void SetAllowedMediaTypes()
 		{
 			this.AllowedMediaTypes.Clear();
-
-			GXMediaType media = new GXMediaType();
-            GXNet net = new GXNet();
-            net.Protocol = NetworkType.Tcp;
-            net.Port = 1000;
+            GXMediaType media = new GXMediaType();
 			media.Name = "Net";
-            media.DefaultMediaSettings = net.Settings;
+            media.DefaultMediaSettings = "<Port>1000</Port>";
 			this.AllowedMediaTypes.Add(media);
-
 			media = new GXMediaType();
 			media.Name = "Serial";
-			Gurux.Serial.GXSerial serial = new Gurux.Serial.GXSerial();
-			serial.BaudRate = 300;
-			serial.DataBits = 7;
-			serial.Parity = System.IO.Ports.Parity.Even;
-			serial.StopBits = System.IO.Ports.StopBits.One;
-			media.DefaultMediaSettings = serial.Settings;
+            media.DefaultMediaSettings = "<Bps>300</Bps><StopBits>1</StopBits><Parity>2</Parity><ByteSize>7</ByteSize>";
 			this.AllowedMediaTypes.Add(media);
+
+            media = new GXMediaType();
+            media.Name = "Terminal";
+            media.DefaultMediaSettings = "<Bps>9600</Bps>";
+            this.AllowedMediaTypes.Add(media);
 		}
-        
-        [DefaultValue(Protocol.None), Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("Is Programming Mode supported.")]
+
+        public override bool ImportFromDeviceEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// TransactionDelay is the minimum transaction delay time, in milliseconds, between transactions.
+        /// </summary>
+        [System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("TransactionDelay is the minimum transaction delay time, in milliseconds, between transactions."),
+        DefaultValue(0)]
+        [GXUserLevelAttribute(UserLevelType.Experienced)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        public override int TransactionDelay
+        {
+            get
+            {
+                return base.TransactionDelay;
+            }
+            set
+            {
+                base.TransactionDelay = value;
+            }
+        }
+
+        /// <summary>
+        /// Used Mode.
+        /// </summary>
+        [DefaultValue(Protocol.None), Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("Used Mode.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
         public Protocol Mode
@@ -73,18 +101,48 @@ namespace Gurux.IEC62056_21.AddIn
 			set;
 		}
 
+        /// <summary>
+        /// Read command type.
+        /// </summary>
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Read command type.")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public int ReadMode
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Write command type.
+        /// </summary>
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("Write command type.")]
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public int WriteMode
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Device serial number.
+        /// </summary>
 		[Browsable(false), ReadOnly(false), 
         System.ComponentModel.Category("Behavior"), 
         System.ComponentModel.Description("Device serial number.")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
-		[ValueAccess(ValueAccessType.Edit, ValueAccessType.Edit)]
+		[ValueAccess(ValueAccessType.None, ValueAccessType.Edit)]
 		public string SerialNumber
         {
 			get;
 			set;
         }	
 
-		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("The password used in programming mode.")]
+        /// <summary>
+        /// Meter password.
+        /// </summary>
+		[Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("Meter password")]
 		[DataMember(IsRequired = false, EmitDefaultValue = false)]
 		[ValueAccess(ValueAccessType.Edit, ValueAccessType.Edit)]
 		public string Password
@@ -94,17 +152,37 @@ namespace Gurux.IEC62056_21.AddIn
 		}
 
         /// <summary>
-        /// If meter is using custom data format.
+        /// Mamimum baud rate used. Zero if ignored.
         /// </summary>
-        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("If meter is using custom data format.")]
+        [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Behavior"), System.ComponentModel.Description("Mamimum baud rate used. Zero if ignored.")]
         [DataMember(IsRequired = false, EmitDefaultValue = false)]
-        [ValueAccess(ValueAccessType.Edit, ValueAccessType.Edit)]
-        public bool CustomDataFormat
+        [GXUserLevelAttribute(UserLevelType.Experienced)]
+        [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]
+        public int MaximumBaudRate
+        {
+            get;
+            set;
+        }       
+
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        internal int AliveMode
         {
             get;
             set;
         }
 
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        internal int AliveData
+        {
+            get;
+            set;
+        }
 
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        internal int AliveParameters
+        {
+            get;
+            set;
+        }
 	}
 }

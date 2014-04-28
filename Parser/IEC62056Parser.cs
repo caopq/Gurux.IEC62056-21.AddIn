@@ -277,6 +277,19 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             }
         }
 
+        static public DataType GetDataType(string obis)
+        {
+            if (obis == "0.9.1")
+            {
+                return DataType.Time;
+            }
+            if (obis == "0.9.2")
+            {
+                return DataType.Date;
+            }
+            return DataType.String;
+        }
+
         /// <summary>
         /// Get list of general OBIS Codes.
         /// </summary>
@@ -294,11 +307,11 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             list.Add("0.9.0");
             list.Add("0.9.1");
             list.Add("0.9.2");
-            list.Add("0.9.5");
-            list.Add("P.01");            
-            //list.Add("P.02");
-            //list.Add("P.98");
-            // list.Add("P.99");
+            list.Add("0.9.5");             
+            list.Add("P.01");
+            list.Add("P.02");
+            list.Add("P.98");
+            list.Add("P.99");            
             return list.ToArray();
         }
 
@@ -513,7 +526,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             if (etx == -1)
             {
                 if (buff[start] == 0x6)
-                {                    
+                {
                     return true;
                 }
                 if (eop == -1)
@@ -535,7 +548,8 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                     }
                     return false;
                 }
-                if (etx - start < 0 || CalculateChecksum(buff, start + 1, etx - start) != buff[etx + 1])
+                if (etx - start < 0 || 
+                    (buff[etx + 1] != 0 && CalculateChecksum(buff, start + 1, etx - start) != buff[etx + 1]))
                 {
                     if ((buff[etx + 1] == 13))
                     {
@@ -554,7 +568,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
 
 
         static public byte[] GetPacket(List<byte> buff, bool throwException, out string header, out string data)
-        {
+        {            
             header = data = null;
             bool crc;
             int eop, soh, stx, etx;
@@ -611,6 +625,10 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             if (stx != -1)
             {
                 data = ASCIIEncoding.ASCII.GetString(tmp, stx + 1, etx - stx - 1);
+                if (data != null && data.Length > 2 && data[0] == '(' && data[data.Length - 1] == ')')
+                {
+                    data = data.Substring(1, data.Length - 2);
+                }
             }
             return tmp;
         }
@@ -656,8 +674,8 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             }
             if (level == 6)
             {
-                bytes.Add((byte) ';');
-                bytes.Add((byte) (0x30 + count));
+                bytes.Add((byte)';');
+                bytes.Add((byte)(0x30 + count));
             }
             bytes.Add((byte)')');
             if (parameters != null)
@@ -670,19 +688,27 @@ namespace Gurux.IEC62056_21.AddIn.Parser
         /// <summary>
         /// Parse table data.
         /// </summary>
-        /// <param name="reply">Received data</param>
+        /// <param name="reply">Received data.</param>
+        /// <param name="columns"></param>
+        /// <param name="status"></param>
+        /// <param name="tm"></param>
+        /// <param name="add"></param>
+        /// <param name="name"></param>
         /// <returns></returns>
-        public static object[][] ParseTableData(byte[] reply, out string[] columns, ref int status, ref DateTime tm, ref int add)
+        public static object[][] ParseTableData(byte[] reply, ref string[] columns, ref int status, ref DateTime tm, ref int add, string name)
         {
-            columns = new string[0];
             string frame, header;
-            if (GetPacket(new List<byte>(reply), true, out header, out frame) == null)
+            byte[] reply2;            
+            if ((reply2 = GetPacket(new List<byte>(reply), true, out header, out frame)) == null)
             {
                 throw new Exception("Failed to receive reply from the device in given time.");
             }
+            if (string.Compare("B0", header) == 0)
+            {
+                throw new Exception("Meter is closed the connecion.");
+            }
             int start = frame.IndexOf('(');
-            int end = frame.IndexOf(')');
-            string name = frame.Substring(0, start);
+            int end = frame.IndexOf(')');            
             string error = frame.Substring(start + 1, end - start - 1);
             if (error.StartsWith("ER"))
             {
@@ -695,64 +721,83 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                 if (end != -1)
                 {
                     error = error.Substring(0, end);
-                }                
+                }
                 throw new Exception(error);
             }
             string[] rows = frame.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-            List<object[]> rowsData = new List<object[]>();            
+            List<object[]> rowsData = new List<object[]>();
+            int offset = 0;
             foreach (string row in rows)
             {
-                string[] cols = row.Split(new string[] { "(", ")" }, StringSplitOptions.RemoveEmptyEntries);
+                List<string> cols = new List<string>(row.Split(new string[] { "(" }, StringSplitOptions.None));
                 //If Load profile or log book.
-                if (name == "P.01" || name == "P.02" || name == "P.98" || name == "P.98")
+                if (name == "P.01" || name == "P.02" || name == "P.98" || name == "P.99")
                 {
                     if (row.StartsWith(name))
                     {
-                        tm = StringToDateTime(cols[1]);
-                        status = Convert.ToInt32(cols[2], 16);
-                        int cnt;
-                        if (name == "P.98" || name == "P.98")
+                        tm = StringToDateTime(cols[1].Replace(")", ""));
+                        status = Convert.ToInt32(cols[2].Replace(")", ""), 16);
+                        if (cols[3].Replace(")", "").Trim() != "")
                         {
-                            add = 0;
-                            cnt = Convert.ToInt32(cols[3]);
+                            add = Convert.ToInt32(cols[3].Replace(")", ""));
                         }
-                        else
-                        {
-                            add = Convert.ToInt32(cols[3]);
-                            cnt = Convert.ToInt32(cols[4]);
-                        }
-                        if (columns.Length == 0)
+                        int cnt = Convert.ToInt32(cols[4].Replace(")", ""));
+                        if (columns == null)
                         {
                             columns = new string[2 + cnt];
                             columns[0] = "DateTime";
                             columns[1] = "Status";
-                            for (int pos = 0; pos != cnt; ++pos)
+                            if (cnt == (cols.Count - 4) / 2)
                             {
-                                columns[2 + pos] = cols[5 + 2 * pos];
+                                for (int pos = 0; pos != cnt; ++pos)
+                                {
+                                    columns[2 + pos] = cols[5 + 2 * pos].Replace(")", "");
+                                }
                             }
+                            else
+                            {
+                                for (int pos = 0; pos != cnt; ++pos)
+                                {
+                                    columns[2 + pos] = cols[5 + 2 * pos].Replace(")", "");
+                                }
+                            }
+                        }
+                        if (cnt == 0)
+                        {
+                            object[] data = new object[columns.Length];
+                            data[0] = tm;
+                            data[1] = status;
+                            rowsData.Add(data);
                         }
                         continue;
                     }
-                }
-                object[] data = new object[2 + cols.Length];
-                //rowsData
-                data[0] = tm;
-                data[1] = status;
-                tm = tm.AddMinutes(add);
-                for (int pos = 0; pos != cols.Length; ++pos)
-                {
-                    double value;
-                    if (double.TryParse(cols[pos], System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out value))
-                    {
-                        data[2 + pos] = value;
-                    }
                     else
                     {
-                        data[2 + pos] = cols[pos];
+                        cols.RemoveAt(0);
+                        object[] data = new object[columns.Length];
+                        data[0] = tm;
+                        data[1] = status;
+                        tm = tm.AddMinutes(add);
+                        if (offset == 0)
+                        {
+                            offset = (cols.Count / (columns.Length - 2));
+                        }
+                        for (int pos = 0; pos != cols.Count; pos += offset)
+                        {
+                            double value;
+                            if (double.TryParse(cols[pos], System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out value))
+                            {
+                                data[2 + pos] = value;
+                            }
+                            else
+                            {
+                                data[2 + pos] = cols[pos].Replace(")", "");
+                            }
+                        }
+                        rowsData.Add(data);
                     }
                 }
-                rowsData.Add(data);
-            }            
+            }
             return rowsData.ToArray();
         }
 
@@ -761,12 +806,10 @@ namespace Gurux.IEC62056_21.AddIn.Parser
         /// </summary>
         /// <param name="serial"></param>
         /// <param name="tryCount"></param>
-        public static void Disconnect(Gurux.Serial.GXSerial serial, int tryCount)
+        public static void Disconnect(IGXMedia media, int tryCount)
         {
-            lock (serial.Synchronous)
+            lock (media.Synchronous)
             {
-                serial.DtrEnable = false;
-                serial.DiscardInBuffer();
                 ReceiveParameters<byte[]> p = new ReceiveParameters<byte[]>()
                 {
                     Eop = GetEops(),
@@ -778,17 +821,14 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                 data.Add((byte)'0');
                 data.Add(0x03);
                 data.Add(CalculateChecksum(data, 1, data.Count - 1));
-                data.Add((byte)'\r');
-                data.Add((byte)'\n');
                 byte[] data1 = data.ToArray();
-                string header, frame;
-                serial.DtrEnable = true;
-                serial.Send(data1);
-                serial.Receive(p);
+                string header, frame;                
+                media.Send(data1, null);
+                media.Receive(p);
                 while (--tryCount > -1)
                 {
-                    if (serial.Receive(p))
-                    {
+                    if (media.Receive(p))
+                    {                        
                         GetPacket(new List<byte>(p.Reply), false, out header, out frame);
                         if (header == "B0")
                         {
@@ -799,7 +839,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                             p.Reply = null;
                         }
                     }
-                    serial.Send(data1);
+                    media.Send(data1, null);
                 }
             }
         }
@@ -818,12 +858,13 @@ namespace Gurux.IEC62056_21.AddIn.Parser
         /// <param name="end"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static List<KeyValuePair<string, List<object>>> ReadTable(Gurux.Common.IGXMedia media, int wt, string name, DateTime start, DateTime end, string parameters, int level, int count)
+        public static object[][] ReadTable(Gurux.Common.IGXMedia media, int wt, string name, DateTime start, DateTime end, string parameters, int level, int count, out string[] columns)
         {
+            columns = null;
             List<byte> reply = new List<byte>();
-            string header, frame, allData = "";
+            string header, frame;
             //Read CRC.
-            ReceiveParameters<byte[]> p = new ReceiveParameters<byte[]>()
+            ReceiveParameters<byte[]> crc = new ReceiveParameters<byte[]>()
             {
                 Count = 1,
                 WaitTime = wt
@@ -837,24 +878,23 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             {
                 do
                 {
-                    List<byte> tmp = new List<byte>(SendData(media, data.ToArray(), '\0', wt, true, level == 6, false));
+                    List<byte> tmp = new List<byte>(SendData(media, data == null ? null : data.ToArray(), '\0', wt, true, level == 6, false));
                     data = null;
                     if (level != 6 && tmp[tmp.Count - 1] == 0x3)
                     {
-                        p.Count = 1;
-                        if (!media.Receive(p))
+                        crc.Count = 1;
+                        if (!media.Receive(crc))
                         {
                             throw new Exception("Failed to receive reply from the device in given time.");
                         }
-                        tmp.AddRange(p.Reply);
+                        tmp.AddRange(crc.Reply);
                     }
                     else if (level == 6)
-                    {
+                    {                        
                         if (GetPacket(tmp, true, out header, out frame) == null)
                         {
                             throw new Exception("Failed to receive reply from the device in given time.");
                         }
-                        allData += frame + Environment.NewLine;
                         if (tmp[tmp.Count - 2] == 0x4)
                         {
                             //Send ACK if more data is left.
@@ -867,85 +907,10 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                 }
                 while (reply[reply.Count - 2] != 0x3);
             }
-            if (level != 6)
-            {
-                if (GetPacket(reply, true, out header, out frame) == null)
-                {
-                    throw new Exception("Failed to receive reply from the device in given time.");
-                }
-                allData += frame + Environment.NewLine;
-            }
-            string error = allData.Split(new string[] { name + "(" }, StringSplitOptions.RemoveEmptyEntries)[0];
-            if (error.StartsWith("ER"))
-            {
-                error = error.Substring(0, error.IndexOf(')'));
-                //Meter returns error if there are no data.
-                if (error == "ERROR")
-                {
-                    return null;
-                }
-                throw new Exception(error);
-            }
-            string[] rows = allData.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-            List<KeyValuePair<string, List<object>>> columns = new List<KeyValuePair<string, List<object>>>();
-            DateTime tm = DateTime.MinValue;
             int status = 0;
+            DateTime tm = DateTime.MinValue;
             int add = 0;
-            foreach (string row in rows)
-            {
-                //If Load profile or log book.
-                if (name == "P.01" || name == "P.02" || name == "P.98" || name == "P.98")
-                {
-                    string[] cols = row.Split(new string[] { "(" }, StringSplitOptions.None);
-                    if (row.StartsWith(name))
-                    {
-                        tm = StringToDateTime(cols[1].Replace(")", ""));
-                        status = Convert.ToInt32(cols[2].Replace(")", ""), 16);
-                        if (cols[3].Replace(")", "").Trim() != "")
-                        {
-                            add = Convert.ToInt32(cols[3].Replace(")", ""));
-                        }
-                        int cnt = Convert.ToInt32(cols[4].Replace(")", ""));
-                        if (columns.Count == 0)
-                        {
-                            columns.Add(new KeyValuePair<string, List<object>>("DateTime", new List<object>()));
-                            columns.Add(new KeyValuePair<string, List<object>>("Status", new List<object>()));
-                            columns[0].Value.Add(tm);
-                            columns[1].Value.Add(status);
-                            for (int pos = 0; pos != cnt; ++pos)
-                            {
-                                string obis = cols[5 + 2 * pos];
-                                List<string> items = new List<string>(obis.Split(new char[] { '-', '.', ':', '*' }));
-                                if (items.Count != 4)
-                                {
-
-                                }
-                                string mikko = GetDescription((cols[5 + 2 * pos].Replace(")", "")));
-                                columns.Add(new KeyValuePair<string, List<object>>(cols[5 + 2 * pos].Replace(")", ""), new List<object>()));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        columns[0].Value.Add(tm);
-                        //columns[1].Value.Add(status);
-                        tm = tm.AddMinutes(add);
-                        for (int pos = 0; pos != cols.Length; ++pos)
-                        {
-                            double value;
-                            if (double.TryParse(cols[pos].Replace(")", ""), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.GetCultureInfo("en-US"), out value))
-                            {
-                                columns[1 + pos].Value.Add(value);
-                            }
-                            else
-                            {
-                                columns[1 + pos].Value.Add(cols[pos].Replace(")", ""));
-                            }
-                        }
-                    }
-                }
-            }
-            return columns;
+            return ParseTableData(reply.ToArray(), ref columns, ref status, ref tm, ref add, name);        
         }
 
         /// <summary>
@@ -1040,15 +1005,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
         {
             try
             {
-                string year;
-                if (includeSeconds)
-                {
-                    year = dt.Year.ToString().Substring(2, 2);
-                }
-                else
-                {
-                    year = AddLeadingZero(dt.Year.ToString(), 4).Substring(1, 3);
-                }
+                string year = dt.Year.ToString().Substring(2, 2);
                 string month = AddLeadingZero(dt.Month.ToString(), 2);
                 string day = AddLeadingZero(dt.Day.ToString(), 2);
                 string hour = AddLeadingZero(dt.Hour.ToString(), 2);
@@ -1094,7 +1051,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
             List<byte> reply = new List<byte>();
             byte[] tmp = Read(media, data, '\0', wt, true);
             reply.AddRange(tmp);
-            string header, frame;
+            string header, frame;            
             GetPacket(reply, true, out header, out frame);
             int start = frame.IndexOf('(') + 1;
             int end = frame.LastIndexOf(')');
@@ -1199,7 +1156,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                 if (data != null)
                 {
                     media.Send(data, null);
-                    if (baudRate != '\0' && media is Gurux.Serial.GXSerial)
+                    if (baudRate != '\0' && media.MediaType == "Serial")
                     {
                         Gurux.Serial.GXSerial serial = media as Gurux.Serial.GXSerial;
                         while (serial.BytesToWrite != 0)
@@ -1251,7 +1208,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                 string header, frame;
                 byte[] packet = null;
                 if (useCrcSend && data != null)
-                {
+                {                    
                     while ((packet = GetPacket(reply2, false, out header, out frame)) == null)
                     {
                         p.Eop = null;
@@ -1305,9 +1262,7 @@ namespace Gurux.IEC62056_21.AddIn.Parser
                     }
                     //If there is more data available.
                     if (readAllDataOnce && reply2[reply2.Count - 2] == 0x4)
-                    {
-                        //Note this sleep is in standard. Do not remove.
-                        System.Threading.Thread.Sleep(200);
+                    {                        
                         reply2.AddRange(SendData(media, new byte[] { 6 }, '\0', wt, useCrcSend, useCrcReply, readAllDataOnce));
                     }
                     return reply2.ToArray();

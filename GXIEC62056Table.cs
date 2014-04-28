@@ -8,9 +8,8 @@ using System.Runtime.Serialization;
 namespace Gurux.IEC62056_21.AddIn
 {
 	/// <summary>
-	/// Extends Gurux.Device.GXProperty class with the IEC specific properties.
-	/// </summary>
-	//[Gurux.Device.Editor.GXReadMessage("ReadTableData", "ReadTableDataReply")]
+    /// Extends Gurux.Device.GXTable class with the IEC specific properties.
+	/// </summary>	
 	[Gurux.Device.Editor.GXReadMessage("ReadTableData", "ReadTableDataReply", "IsTableRead", "ReadTableDataNext")]
 	[DataContract()]
     public class GXIEC62056Table : Gurux.Device.GXTable, IGXPartialRead

@@ -11,7 +11,7 @@ namespace Gurux.IEC62056_21.AddIn
 	/// Extends Gurux.Device.GXProperty class with the IEC specific properties.
 	/// </summary>
 	[Gurux.Device.Editor.GXReadMessage("ReadData", "ReadDataReply", EnableParentRead = false)]
-	//[Gurux.Device.Editor.GXWriteMessage("WriteData", "WriteDataReply")]
+	//Mikko [Gurux.Device.Editor.GXWriteMessage("WriteData", "WriteDataReply")]
 	[DataContract()]
 	public class GXIEC62056Property : Gurux.Device.GXProperty
 	{
@@ -21,6 +21,7 @@ namespace Gurux.IEC62056_21.AddIn
 		public GXIEC62056Property()
 		{
             this.ValueType = typeof(string);
+            ReadMode = WriteMode;
 		}
 
         [Browsable(true), ReadOnly(false), System.ComponentModel.Category("Data"), System.ComponentModel.Description("OBIS code.")]
@@ -60,10 +61,11 @@ namespace Gurux.IEC62056_21.AddIn
 		}
 
         [System.ComponentModel.Category("Design"), DefaultValue(null),
-        System.ComponentModel.Description("The UI data type of the property, described in the template file.")]
+        System.ComponentModel.Description("The data type of the property, described in the template file.")]
         [ValueAccess(ValueAccessType.Edit, ValueAccessType.None)]        
         [Editor(typeof(GXValueTypeEditor), typeof(System.Drawing.Design.UITypeEditor))]
-        override public Type ValueType
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        public DataType DataType
         {
             get;
             set;

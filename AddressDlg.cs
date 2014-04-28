@@ -218,14 +218,14 @@ namespace Gurux.IEC62056_21.AddIn
                 ((GXIEC62056Property)m_Property).WriteMode = Convert.ToInt32((WriteModeDdl.SelectedIndex + 1).ToString());
                 ((GXIEC62056Property)m_Property).ReadMode = Convert.ToInt32((ReadModeDdl.SelectedIndex + 1).ToString());
             }
-            else if (m_Property is GXIEC62056TableProperty)
+            else if (m_Property is GXIEC62056Property)
             {
                 string address = addressTb.Text;
-                address = address.Replace("(", "");
-                address = address.Replace(")", "");
+                address = address.Replace("(", ".");
+                address = address.Replace(")", ".");
                 address = address.Replace("-", ".");
                 address = address.Replace(":", ".");
-                ((GXIEC62056TableProperty)m_Property).Data = address;
+                ((GXIEC62056Property)m_Property).Data = address;
             }           
         }
 
@@ -235,14 +235,17 @@ namespace Gurux.IEC62056_21.AddIn
         }
 
         void IGXWizardPage.Initialize()
-        {			
-			if (m_Property is GXIEC62056TableProperty)
+        {
+            /* Mikko
+            if (m_Property is GXIEC62056Property)
 			{
                 GXIEC62056TableProperty prop = m_Property  as GXIEC62056TableProperty;
 				AddressCb.Visible = WriteModeLbl.Visible = WriteModeDdl.Visible = ReadModeLbl.Visible = ReadModeDdl.Visible = false;
 				addressTb.Text = prop.Data;                
 			}
-            else if (m_Property is GXIEC62056Property)
+            else 
+             * */
+            if (m_Property is GXIEC62056Property)
             {
                 GXIEC62056Property prop = m_Property as GXIEC62056Property;
                 addressTb.Visible = false;                

@@ -31,6 +31,21 @@
     </UpgradeBackupLocation>
     <OldToolsVersion>3.5</OldToolsVersion>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>bin\Debug\</OutputPath>
@@ -93,19 +108,17 @@
     <Compile Include="AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DataType.cs" />
     <Compile Include="GXIEC62056Category.cs" />
     <Compile Include="GXIEC62056ReadoutCategory.cs" />
     <Compile Include="GXIEC62056ReadoutProperty.cs" />
-    <Compile Include="GXIEC62056TableProperty.cs" />
     <Compile Include="IEC62056DeviceModeWizardDlg.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="IEC62056PacketHandler.cs" />
     <Compile Include="IEC62056PacketParser.cs" />
     <Compile Include="IEC62056_21AddIn.cs" />
-    <Compile Include="Manufacturer.cs" />
     <Compile Include="Parser\IEC62056Parser.cs" />
-    <Compile Include="GXIEC62056InitProperty.cs" />
     <Compile Include="GXIEC62056Table.cs" />
     <Compile Include="Parser\IEcDataObject.cs" />
     <Compile Include="GXIEC62056Device.cs">
@@ -166,6 +179,23 @@
       <Project>{D07A57D7-F2E7-4A0F-95D1-EF3B1FD688F0}</Project>
       <Name>Gurux.Serial_2008</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
